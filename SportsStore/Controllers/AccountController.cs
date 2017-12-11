@@ -13,6 +13,7 @@ using Microsoft.Extensions.Options;
 using SportsStore.Models;
 using SportsStore.Models.AccountViewModels;
 using SportsStore.Services;
+using SportsStore.Models.Domain;
 
 namespace SportsStore.Controllers
 {
@@ -429,7 +430,6 @@ namespace SportsStore.Controllers
         {
             return View();
         }
-
 
         [HttpGet]
         public IActionResult AccessDenied()

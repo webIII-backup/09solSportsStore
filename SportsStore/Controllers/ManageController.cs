@@ -13,6 +13,7 @@ using Microsoft.Extensions.Options;
 using SportsStore.Models;
 using SportsStore.Models.ManageViewModels;
 using SportsStore.Services;
+using SportsStore.Models.Domain;
 
 namespace SportsStore.Controllers
 {
@@ -480,7 +481,7 @@ namespace SportsStore.Controllers
             int currentPosition = 0;
             while (currentPosition + 4 < unformattedKey.Length)
             {
-                result.Append(unformattedKey.Substring(currentPosition, 4)).Append(" ");
+                result.Append(unformattedKey, currentPosition, 4).Append(" ");
                 currentPosition += 4;
             }
             if (currentPosition < unformattedKey.Length)
