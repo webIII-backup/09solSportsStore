@@ -22,6 +22,8 @@ namespace SportsStore.Tests.Controllers
         private readonly Product _runningShoes;
         private readonly int _runningShoesId;
         private readonly Product _nieuwProduct;
+        private readonly int _nonExistingProductId = 999;
+        private readonly int _soccerId = 1;
 
         public ProductControllerTest()
         {
@@ -43,6 +45,13 @@ namespace SportsStore.Tests.Controllers
                 Name = "nieuw product",
                 Price = 10
             };
+
+            _mockProductRepository.Setup(p => p.GetAll()).Returns(_dummyContext.Products);
+            _mockProductRepository.Setup(p => p.GetById(_runningShoesId)).Returns(_dummyContext.RunningShoes);
+            _mockProductRepository.Setup(p => p.GetById(_nonExistingProductId)).Returns(null as Product);
+
+            _mockCategoryRepository.Setup(p => p.GetAll()).Returns(_dummyContext.Categories);
+            _mockCategoryRepository.Setup(c => c.GetById(_soccerId)).Returns(_dummyContext.Soccer);
         }
 
         #region == Index ==
@@ -50,7 +59,6 @@ namespace SportsStore.Tests.Controllers
         [Fact]
         public void Index_AllCategories_PassesAllProductsSortedByNameInModel()
         {
-            _mockProductRepository.Setup(p => p.GetAll()).Returns(_dummyContext.Products);
             var result = _productController.Index() as ViewResult;
             List<Product> products = (result?.Model as IEnumerable<Product>)?.ToList();
             Assert.Equal(11, products.Count);
@@ -61,7 +69,6 @@ namespace SportsStore.Tests.Controllers
         [Fact]
         public void Index_ExistingCategory_PassesSelectListWithAllCategoriesSortedByNameInViewData()
         {
-            _mockCategoryRepository.Setup(p => p.GetAll()).Returns(_dummyContext.Categories);
             var result = _productController.Index() as ViewResult;
             var categories = result?.ViewData["Categories"] as SelectList;
             Assert.Equal(3, categories.Count());
@@ -70,7 +77,7 @@ namespace SportsStore.Tests.Controllers
         [Fact]
         public void Index_ExistingCategory_PassesAllProductsFromThatCategorySortedByNameInModel()
         {
-            _mockProductRepository.Setup(p => p.GetByCategory(1)).Returns(_dummyContext.Soccer.Products);
+            _mockProductRepository.Setup(p => p.GetByCategory(_soccerId)).Returns(_dummyContext.Soccer.Products);
             var result = _productController.Index(1) as ViewResult;
             List<Product> products = (result?.Model as IEnumerable<Product>)?.ToList();
             Assert.Equal(4, products.Count);
@@ -84,9 +91,7 @@ namespace SportsStore.Tests.Controllers
         [Fact]
         public void EditHttpGet_ValidProductId_PassesProductDetailsInAnEditViewModelToView()
         {
-            _mockProductRepository.Setup(p => p.GetById(1)).Returns(_dummyContext.RunningShoes);
-            _mockCategoryRepository.Setup(c => c.GetAll()).Returns(_dummyContext.Categories);
-            var result = _productController.Edit(1) as ViewResult;
+            var result = _productController.Edit(_runningShoesId) as ViewResult;
             var productVm = result?.Model as EditViewModel;
             Assert.Equal("Running shoes", productVm?.Name);
         }
@@ -94,9 +99,7 @@ namespace SportsStore.Tests.Controllers
         [Fact]
         public void EditHttpGet_ValidProductId_PassesSelectListWithAllCategoriesSortedByNameInViewData()
         {
-            _mockProductRepository.Setup(p => p.GetById(1)).Returns(_dummyContext.RunningShoes);
-            _mockCategoryRepository.Setup(c => c.GetAll()).Returns(_dummyContext.Categories);
-            var result = _productController.Edit(1) as ViewResult;
+            var result = _productController.Edit(_runningShoesId) as ViewResult;
             var categories = result?.ViewData["Categories"] as SelectList;
             Assert.Equal(3, categories.Count());
         }
@@ -104,8 +107,7 @@ namespace SportsStore.Tests.Controllers
         [Fact]
         public void EditHttpGet_ValidProductId_PassesSelectListWithAllAvailabilitiesInViewData()
         {
-            _mockProductRepository.Setup(p => p.GetById(1)).Returns(_dummyContext.RunningShoes);
-            var result = _productController.Edit(1) as ViewResult;
+            var result = _productController.Edit(_runningShoesId) as ViewResult;
             var availabilities = result?.ViewData["Availabilities"] as SelectList;
             Assert.Equal(3, availabilities.Count());
         }
@@ -113,22 +115,19 @@ namespace SportsStore.Tests.Controllers
         [Fact]
         public void EditHttpGet_ProductNotFound_ReturnsNotFound()
         {
-            _mockProductRepository.Setup(p => p.GetById(1)).Returns(null as Product);
-            var result = _productController.Edit(1);
+            var result = _productController.Edit(_nonExistingProductId);
             Assert.IsType<NotFoundResult>(result);
         }
 
         [Fact]
         public void EditHttpPost_ValidEdit_UpdatesAndPersistsTheProduct()
         {
-            _mockProductRepository.Setup(p => p.GetById(1)).Returns(_dummyContext.RunningShoes);
-            _mockCategoryRepository.Setup(c => c.GetById(It.IsAny<int>())).Returns(_dummyContext.Soccer);
             var productVm = new EditViewModel(_dummyContext.RunningShoes)
             {
                 Name = "RunningShoesGewijzigd",
                 Price = 1000
             };
-            _productController.Edit(1, productVm);
+            _productController.Edit(_runningShoesId, productVm);
             Assert.Equal("RunningShoesGewijzigd", _runningShoes.Name);
             Assert.Equal(1000, _runningShoes.Price);
             Assert.Equal("Protective and fashionable", _runningShoes.Description);
@@ -138,19 +137,16 @@ namespace SportsStore.Tests.Controllers
         [Fact]
         public void EditHttpPost_ValidEdit_RedirectsToIndex()
         {
-            _mockProductRepository.Setup(p => p.GetById(1)).Returns(_dummyContext.RunningShoes);
-            _mockCategoryRepository.Setup(c => c.GetById(1)).Returns(_dummyContext.Soccer);
             var productVm = new EditViewModel(_runningShoes);
-            var result = _productController.Edit(1, productVm) as RedirectToActionResult;
+            var result = _productController.Edit(_runningShoesId, productVm) as RedirectToActionResult;
             Assert.Equal("Index", result?.ActionName);
         }
 
         [Fact]
         public void EditHttpPost_InValidEdit_DoesNotChangeNorPersistProduct()
         {
-            _mockProductRepository.Setup(m => m.GetById(4)).Returns(_dummyContext.RunningShoes);
             var productVm = new EditViewModel(_dummyContext.RunningShoes) { Price = -1 };
-            _productController.Edit(4, productVm);
+            _productController.Edit(_runningShoesId, productVm);
             var runningShoes = _dummyContext.RunningShoes;
             Assert.Equal("Running shoes", runningShoes.Name);
             Assert.Equal(95, runningShoes.Price);
@@ -160,28 +156,25 @@ namespace SportsStore.Tests.Controllers
         [Fact]
         public void EditHttpPost_InValidEdit_RedirectsToActionIndex()
         {
-            _mockProductRepository.Setup(m => m.GetById(4)).Returns(_dummyContext.RunningShoes);
             var productVm = new EditViewModel(_dummyContext.RunningShoes) { Price = -1 };
-            var action = _productController.Edit(4, productVm) as RedirectToActionResult;
+            var action = _productController.Edit(_runningShoesId, productVm) as RedirectToActionResult;
             Assert.Equal("Index", action?.ActionName);
         }
 
         [Fact]
         public void EditHttpPost_ProductNotFound_ReturnsNotFoundResult()
         {
-            _mockProductRepository.Setup(m => m.GetById(4)).Returns(null as Product);
             var productVm = new EditViewModel(_dummyContext.RunningShoes);
-            var action = _productController.Edit(4, productVm);
+            var action = _productController.Edit(_nonExistingProductId, productVm);
             Assert.IsType<NotFoundResult>(action);
         }
 
         [Fact]
         public void EditHttpPost_ModelStateErrors_DoesNotChangeNorPersistTheProduct()
         {
-            _mockProductRepository.Setup(m => m.GetById(4)).Returns(_dummyContext.RunningShoes);
             var productVm = new EditViewModel(_dummyContext.RunningShoes);
             _productController.ModelState.AddModelError("", "Any error");
-            _productController.Edit(4, productVm);
+            _productController.Edit(_runningShoesId, productVm);
             var runningShoes = _dummyContext.RunningShoes;
             Assert.Equal("Running shoes", runningShoes.Name);
             Assert.Equal(95, runningShoes.Price);
@@ -191,10 +184,9 @@ namespace SportsStore.Tests.Controllers
         [Fact]
         public void EditHttpPost_ModelStateErrors_PassesEditViewModelInViewResultModel()
         {
-            _mockProductRepository.Setup(m => m.GetById(4)).Returns(_dummyContext.RunningShoes);
             var productVm = new EditViewModel(_dummyContext.RunningShoes);
             _productController.ModelState.AddModelError("", "Any error");
-            var result = _productController.Edit(4, productVm) as ViewResult;
+            var result = _productController.Edit(_runningShoesId, productVm) as ViewResult;
             productVm = result?.Model as EditViewModel;
             Assert.Equal("Running shoes", productVm.Name);
         }
@@ -202,11 +194,9 @@ namespace SportsStore.Tests.Controllers
         [Fact]
         public void EditHttpPost_ModelStateErrors_PassesSelectListsInViewData()
         {
-            _mockProductRepository.Setup(m => m.GetById(4)).Returns(_dummyContext.RunningShoes);
-            _mockCategoryRepository.Setup(m => m.GetAll()).Returns(_dummyContext.Categories);
             var productVm = new EditViewModel(_dummyContext.RunningShoes);
             _productController.ModelState.AddModelError("", "Any error");
-            var result = _productController.Edit(4, productVm) as ViewResult;
+            var result = _productController.Edit(_runningShoesId, productVm) as ViewResult;
             var categories = result?.ViewData["Categories"] as SelectList;
             var availabilities = result?.ViewData["Availabilities"] as SelectList;
             Assert.Equal(3, categories.Count());
@@ -219,7 +209,6 @@ namespace SportsStore.Tests.Controllers
         [Fact]
         public void CreateHttpGet_PassesDetailsOfANewProductInAnEditViewModelToView()
         {
-            _mockCategoryRepository.Setup(c => c.GetAll()).Returns(_dummyContext.Categories);
             var result = _productController.Create() as ViewResult;
             var productVm = result?.Model as EditViewModel;
             Assert.Null(productVm?.Name);
@@ -228,7 +217,6 @@ namespace SportsStore.Tests.Controllers
         [Fact]
         public void CreateHttpPost_ValidProduct_RedirectsToIndex()
         {
-            _mockCategoryRepository.Setup(c => c.GetById(1)).Returns(_dummyContext.Soccer);
             var productVm = new EditViewModel(_nieuwProduct);
             var result = _productController.Create(productVm) as RedirectToActionResult;
             Assert.Equal("Index", result?.ActionName);
@@ -238,7 +226,6 @@ namespace SportsStore.Tests.Controllers
         public void CreateHttpPost_ValidProduct_AddsNewProductToRepository()
         {
             _mockProductRepository.Setup(p => p.Add(It.IsNotNull<Product>()));
-            _mockCategoryRepository.Setup(p => p.GetById(It.IsAny<int>())).Returns(_dummyContext.Soccer);
             var productVm = new EditViewModel(_nieuwProduct);
             _productController.Create(productVm);
             _mockProductRepository.Verify(m => m.Add(It.IsNotNull<Product>()), Times.Once);
@@ -263,6 +250,40 @@ namespace SportsStore.Tests.Controllers
             Assert.Equal("Index", action?.ActionName);
         }
 
+        [Fact]
+        public void CreateHttpPost_ModelStateErrors_DoesNotChangeNorPersistTheProduct()
+        {
+            var productVm = new EditViewModel(_dummyContext.RunningShoes);
+            _productController.ModelState.AddModelError("", "Any error");
+            _productController.Create(productVm);
+            var runningShoes = _dummyContext.RunningShoes;
+            Assert.Equal("Running shoes", runningShoes.Name);
+            Assert.Equal(95, runningShoes.Price);
+            _mockProductRepository.Verify(m => m.SaveChanges(), Times.Never());
+        }
+
+        [Fact]
+        public void CreateHttpPost_ModelStateErrors_PassesEditViewModelInViewResultModel()
+        {
+            var productVm = new EditViewModel(_dummyContext.RunningShoes);
+            _productController.ModelState.AddModelError("", "Any error");
+            var result = _productController.Create(productVm) as ViewResult;
+            productVm = result?.Model as EditViewModel;
+            Assert.Equal("Running shoes", productVm.Name);
+        }
+
+        [Fact]
+        public void CreateHttpPost_ModelStateErrors_PassesSelectListsInViewData()
+        {
+            var productVm = new EditViewModel(_dummyContext.RunningShoes);
+            _productController.ModelState.AddModelError("", "Any error");
+            var result = _productController.Create(productVm) as ViewResult;
+            var categories = result?.ViewData["Categories"] as SelectList;
+            var availabilities = result?.ViewData["Availabilities"] as SelectList;
+            Assert.Equal(3, categories.Count());
+            Assert.Equal(3, availabilities.Count());
+        }
+
         #endregion
 
         #region == Delete ==
@@ -270,25 +291,22 @@ namespace SportsStore.Tests.Controllers
         [Fact]
         public void DeleteHttpGet_ProductFound_PassesProductNameInViewDataToView()
         {
-            _mockProductRepository.Setup(p => p.GetById(1)).Returns(_dummyContext.RunningShoes);
-            var result = _productController.Delete(1) as ViewResult;
+            var result = _productController.Delete(_runningShoesId) as ViewResult;
             Assert.Equal("Running shoes", result?.ViewData["ProductName"]);
         }
 
         [Fact]
         public void DeleteHttpGet_ProductNotFound_ReturnsNotFound()
         {
-            _mockProductRepository.Setup(p => p.GetById(1)).Returns(null as Product);
-            var result = _productController.Delete(1);
+            var result = _productController.Delete(_nonExistingProductId);
             Assert.IsType<NotFoundResult>(result);
         }
 
         [Fact]
         public void DeleteHttpPost_ProductFound_DeletesProduct()
         {
-            _mockProductRepository.Setup(p => p.GetById(1)).Returns(_dummyContext.RunningShoes);
             _mockProductRepository.Setup(p => p.Delete(_dummyContext.RunningShoes));
-            _productController.DeleteConfirmed(1);
+            _productController.DeleteConfirmed(_runningShoesId);
             _mockProductRepository.Verify(m => m.Delete(_dummyContext.RunningShoes), Times.Once);
             _mockProductRepository.Verify(m => m.SaveChanges(), Times.Once);
         }
@@ -296,16 +314,15 @@ namespace SportsStore.Tests.Controllers
         [Fact]
         public void DeleteHttpPost_SuccessfullDelete_RedirectsToIndex()
         {
-            _mockProductRepository.Setup(p => p.GetById(1)).Returns(_dummyContext.RunningShoes);
-            var result = _productController.DeleteConfirmed(1) as RedirectToActionResult;
+            var result = _productController.DeleteConfirmed(_runningShoesId) as RedirectToActionResult;
             Assert.Equal("Index", result?.ActionName);
         }
 
         [Fact]
         public void DeleteHttpPost_UnsuccessfullDelete_RedirectsToIndex()
         {
-            _mockProductRepository.Setup(p => p.GetById(1)).Throws<ArgumentException>();
-            var result = _productController.DeleteConfirmed(1) as RedirectToActionResult;
+            _mockProductRepository.Setup(p => p.GetById(111)).Throws<ArgumentException>();
+            var result = _productController.DeleteConfirmed(111) as RedirectToActionResult;
             Assert.Equal("Index", result?.ActionName);
         }
         #endregion
