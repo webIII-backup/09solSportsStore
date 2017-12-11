@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using SportsStore.Models.Domain;
 using SportsStore.Models.ProductViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using SportsStore.Helpers;
 
 namespace SportsStore.Controllers
 {
@@ -36,6 +37,7 @@ namespace SportsStore.Controllers
             if (product == null)
                 return NotFound();
             ViewData["IsEdit"] = true;
+            ViewData["Availabilities"] = product.Availability.ToSelectList();
             ViewData["Categories"] = GetCategoriesSelectList();
             return View(new EditViewModel(product));
         }
@@ -43,24 +45,34 @@ namespace SportsStore.Controllers
         [HttpPost]
         public IActionResult Edit(int id, EditViewModel editViewModel)
         {
-            try
+            Product product = _productRepository.GetById(id);
+            if (product == null)
+                return NotFound();
+            if (ModelState.IsValid)
             {
-                Product product = _productRepository.GetById(id);
-                MapToProduct(editViewModel, product);
-                _productRepository.SaveChanges();
-                TempData["message"] = $"You successfully updated product {product.Name}.";
+                try
+                {
+                    MapToProduct(editViewModel, product);
+                    _productRepository.SaveChanges();
+                    TempData["message"] = $"You successfully updated product {product.Name}.";
+                }
+                catch
+                {
+                    TempData["error"] = "Sorry, something went wrong, product could not be updated...";
+                }
+                return RedirectToAction(nameof(Index));
             }
-            catch
-            {
-                TempData["error"] = "Sorry, something went wrong, product was not updated...";
-            }
-            return RedirectToAction(nameof(Index));
+            ViewData["IsEdit"] = true;
+            ViewData["Availabilities"] = product.Availability.ToSelectList();
+            ViewData["Categories"] = GetCategoriesSelectList();
+            return View(editViewModel);
         }
 
         public IActionResult Create()
         {
             var product = new Product();
             ViewData["IsEdit"] = false;
+            ViewData["Availabilities"] = product.Availability.ToSelectList();
             ViewData["Categories"] = GetCategoriesSelectList();
             return View(nameof(Edit), new EditViewModel(product));
         }

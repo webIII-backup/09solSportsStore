@@ -92,13 +92,22 @@ namespace SportsStore.Tests.Controllers
         }
 
         [Fact]
-        public void EditHttpget_ValidProductId_PassesSelectListWithAllCategoriesSortedByNameInViewData()
+        public void EditHttpGet_ValidProductId_PassesSelectListWithAllCategoriesSortedByNameInViewData()
         {
             _mockProductRepository.Setup(p => p.GetById(1)).Returns(_dummyContext.RunningShoes);
             _mockCategoryRepository.Setup(c => c.GetAll()).Returns(_dummyContext.Categories);
             var result = _productController.Edit(1) as ViewResult;
             var categories = result?.ViewData["Categories"] as SelectList;
             Assert.Equal(3, categories.Count());
+        }
+
+        [Fact]
+        public void EditHttpGet_ValidProductId_PassesSelectListWithAllAvailabilitiesInViewData()
+        {
+            _mockProductRepository.Setup(p => p.GetById(1)).Returns(_dummyContext.RunningShoes);
+            var result = _productController.Edit(1) as ViewResult;
+            var availabilities = result?.ViewData["Availabilities"] as SelectList;
+            Assert.Equal(3, availabilities.Count());
         }
 
         [Fact]
@@ -157,6 +166,52 @@ namespace SportsStore.Tests.Controllers
             Assert.Equal("Index", action?.ActionName);
         }
 
+        [Fact]
+        public void EditHttpPost_ProductNotFound_ReturnsNotFoundResult()
+        {
+            _mockProductRepository.Setup(m => m.GetById(4)).Returns(null as Product);
+            var productVm = new EditViewModel(_dummyContext.RunningShoes);
+            var action = _productController.Edit(4, productVm);
+            Assert.IsType<NotFoundResult>(action);
+        }
+
+        [Fact]
+        public void EditHttpPost_ModelStateErrors_DoesNotChangeNorPersistTheProduct()
+        {
+            _mockProductRepository.Setup(m => m.GetById(4)).Returns(_dummyContext.RunningShoes);
+            var productVm = new EditViewModel(_dummyContext.RunningShoes);
+            _productController.ModelState.AddModelError("", "Any error");
+            _productController.Edit(4, productVm);
+            var runningShoes = _dummyContext.RunningShoes;
+            Assert.Equal("Running shoes", runningShoes.Name);
+            Assert.Equal(95, runningShoes.Price);
+            _mockProductRepository.Verify(m => m.SaveChanges(), Times.Never());
+        }
+
+        [Fact]
+        public void EditHttpPost_ModelStateErrors_PassesEditViewModelInViewResultModel()
+        {
+            _mockProductRepository.Setup(m => m.GetById(4)).Returns(_dummyContext.RunningShoes);
+            var productVm = new EditViewModel(_dummyContext.RunningShoes);
+            _productController.ModelState.AddModelError("", "Any error");
+            var result = _productController.Edit(4, productVm) as ViewResult;
+            productVm = result?.Model as EditViewModel;
+            Assert.Equal("Running shoes", productVm.Name);
+        }
+
+        [Fact]
+        public void EditHttpPost_ModelStateErrors_PassesSelectListsInViewData()
+        {
+            _mockProductRepository.Setup(m => m.GetById(4)).Returns(_dummyContext.RunningShoes);
+            _mockCategoryRepository.Setup(m => m.GetAll()).Returns(_dummyContext.Categories);
+            var productVm = new EditViewModel(_dummyContext.RunningShoes);
+            _productController.ModelState.AddModelError("", "Any error");
+            var result = _productController.Edit(4, productVm) as ViewResult;
+            var categories = result?.ViewData["Categories"] as SelectList;
+            var availabilities = result?.ViewData["Availabilities"] as SelectList;
+            Assert.Equal(3, categories.Count());
+            Assert.Equal(3, availabilities.Count());
+        }
         #endregion
 
         #region == Create ==
