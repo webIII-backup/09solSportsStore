@@ -1,4 +1,5 @@
 ﻿using SportsStore.Models.Domain;
+using System.ComponentModel.DataAnnotations;
 
 namespace SportsStore.Models.ProductViewModels
 {
@@ -7,6 +8,7 @@ namespace SportsStore.Models.ProductViewModels
         public string Name { get; set; }
         public string Description { get; set; }
         public int Price { get; set; }
+        [Display(Name = "In stock")]
         public bool InStock { get; set; }
         public Availability Availability { get; set; }
         public int CategoryId { get; set; }
