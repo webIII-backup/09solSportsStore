@@ -325,6 +325,14 @@ namespace SportsStore.Tests.Controllers
             var result = _productController.DeleteConfirmed(111) as RedirectToActionResult;
             Assert.Equal("Index", result?.ActionName);
         }
+
+        [Fact]
+        public void DeleteHttpPost_ProductNotFound_ReturnsNotFound()
+        {
+            var result = _productController.DeleteConfirmed(_nonExistingProductId);
+            Assert.IsType<NotFoundResult>(result);
+        }
+
         #endregion
     }
 }
