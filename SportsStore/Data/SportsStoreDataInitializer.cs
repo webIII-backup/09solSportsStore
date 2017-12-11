@@ -2,6 +2,7 @@
 using SportsStore.Models.Domain;
 using System;
 using System.Collections.Generic;
+using System.Security.Claims;
 using System.Threading.Tasks;
 
 namespace SportsStore.Data
@@ -22,7 +23,7 @@ namespace SportsStore.Data
             _dbContext.Database.EnsureDeleted();
             if (_dbContext.Database.EnsureCreated())
             {
-                 Category watersports = new Category("WaterSports");
+                Category watersports = new Category("WaterSports");
                 Category soccer = new Category("Soccer");
                 Category chess = new Category("Chess");
                 var categories = new List<Category>
@@ -65,19 +66,20 @@ namespace SportsStore.Data
                         cart.AddLine(soccer.FindProduct("Corner flags"), 2);
                         klant.PlaceOrder(cart, DateTime.Today.AddDays(10), false, klant.Street, klant.City);
                         var userName = klant.CustomerName + "@hogent.be";
-                        await CreateUser(userName, userName, "P@ssword1!");
-                            }
+                        await CreateUser(userName, userName, "P@ssword1!", "Customer");
+                    }
                     _dbContext.Customers.Add(klant);
                 }
-                await CreateUser("admin@sportsstore.be", "admin@sportsstore.be", "P@ssword1!");
+                await CreateUser("admin@sportsstore.be", "admin@sportsstore.be", "P@ssword1!", "Admin");
                 _dbContext.SaveChanges();
             }
         }
 
-        private async Task CreateUser(string userName, string email, string password)
+        private async Task CreateUser(string userName, string email, string password, string role)
         {
             var user = new ApplicationUser { UserName = userName, Email = email };
             await _userManager.CreateAsync(user, password);
+            await _userManager.AddClaimAsync(user, new Claim(ClaimTypes.Role, role));
         }
     }
 }

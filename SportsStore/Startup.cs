@@ -9,6 +9,7 @@ using SportsStore.Services;
 using SportsStore.Models.Domain;
 using SportsStore.Filters;
 using SportsStore.Data.Repositories;
+using System.Security.Claims;
 
 namespace SportsStore
 {
@@ -30,6 +31,11 @@ namespace SportsStore
             services.AddIdentity<ApplicationUser, IdentityRole>()
                 .AddEntityFrameworkStores<ApplicationDbContext>()
                 .AddDefaultTokenProviders();
+
+            services.AddAuthorization(options => {
+                options.AddPolicy("Admin", policy => policy.RequireClaim(ClaimTypes.Role, "Admin"));
+                options.AddPolicy("Customer", policy => policy.RequireClaim(ClaimTypes.Role, "Customer"));
+            });
 
             services.AddScoped<IProductRepository, ProductRepository>();
             services.AddScoped<ICategoryRepository, CategoryRepository>();

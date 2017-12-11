@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using SportsStore.Models.Domain;
 using SportsStore.Filters;
+using Microsoft.AspNetCore.Authorization;
 
 namespace SportsStore.Controllers
 {
@@ -55,6 +56,12 @@ namespace SportsStore.Controllers
         {
             cart.DecreaseQuantity(id);
             return RedirectToAction(nameof(Index));
+        }
+
+        [Authorize(Policy = "Customer")]
+        public IActionResult Checkout()
+        {
+            return View();
         }
     }
 }
